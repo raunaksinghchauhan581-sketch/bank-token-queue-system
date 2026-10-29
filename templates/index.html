@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bank Token Queue System</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Segoe UI, Arial, sans-serif; margin: 0; background: #f1f5f9; color: #1e293b; }
+  header { background: #1e3a8a; color: white; padding: 18px 30px; }
+  header h1 { margin: 0; font-size: 24px; }
+  header p { margin: 4px 0 0; opacity: .8; font-size: 14px; }
+  .container { max-width: 1100px; margin: 20px auto; padding: 0 16px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stat { background: white; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .stat b { display: block; font-size: 28px; color: #1e3a8a; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: white; border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 16px; }
+  .card h2 { margin-top: 0; font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+  input[type=text], select { width: 100%; padding: 10px; margin: 6px 0 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; }
+  button { background: #1e3a8a; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-size: 15px; }
+  button:hover { background: #1d4ed8; }
+  button.green { background: #15803d; width: 100%; font-size: 17px; padding: 14px; }
+  button.green:hover { background: #166534; }
+  button.grey { background: #64748b; }
+  .serving { text-align: center; background: #dcfce7; border: 2px solid #15803d; }
+  .serving .big { font-size: 42px; font-weight: bold; color: #15803d; }
+  .token { display: flex; justify-content: space-between; padding: 9px 12px; margin: 6px 0; border-radius: 6px; background: #f8fafc; border-left: 5px solid #64748b; }
+  .token.senior { border-left-color: #d97706; background: #fffbeb; }
+  .empty { color: #94a3b8; font-style: italic; }
+  .flash { padding: 12px 16px; border-radius: 6px; margin-bottom: 14px; }
+  .flash.success { background: #dcfce7; color: #166534; }
+  .flash.error { background: #fee2e2; color: #991b1b; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e2e8f0; }
+  @media (max-width: 800px) { .grid, .stats { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Bank Token Queue System</h1>
+  <p>DSA Mini Project - Queue (deque) and Priority Queue (heapq) in Python</p>
+</header>
+<div class="container">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="stats">
+    <div class="stat"><b>{{ total }}</b>Tokens issued</div>
+    <div class="stat"><b>{{ waiting }}</b>Waiting</div>
+    <div class="stat"><b>{{ served }}</b>Served</div>
+    <div class="stat"><b>{{ stats.Senior }} / {{ stats.Regular }}</b>Senior / Regular</div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>Issue New Token</h2>
+        <form method="post" action="/issue">
+          <label>Customer name</label>
+          <input type="text" name="name" placeholder="Enter name" autocomplete="off">
+          <label>Customer type</label>
+          <select name="type">
+            <option value="Regular">Regular</option>
+            <option value="Senior">Senior Citizen (Priority)</option>
+          </select>
+          <button type="submit">Generate Token</button>
+        </form>
+      </div>
+
+      <div class="card serving">
+        <h2>Now Serving</h2>
+        {% if now_serving %}
+          <div class="big">{{ now_serving.token }}</div>
+          <div>{{ now_serving.name }} ({{ now_serving.type }})</div>
+        {% else %}
+          <div class="empty">Nobody served yet</div>
+        {% endif %}
+        <form method="post" action="/serve" style="margin-top:14px">
+          <button class="green" type="submit">Serve Next Customer</button>
+        </form>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Priority Queue (Senior Citizens)</h2>
+        {% for c in priority %}
+          <div class="token senior"><span><b>{{ c.token }}</b> - {{ c.name }}</span><span>{{ c.time }}</span></div>
+        {% else %}
+          <div class="empty">No senior citizens waiting</div>
+        {% endfor %}
+      </div>
+      <div class="card">
+        <h2>Regular Queue (FIFO)</h2>
+        {% for c in regular %}
+          <div class="token"><span><b>{{ c.token }}</b> - {{ c.name }}</span><span>{{ c.time }}</span></div>
+        {% else %}
+          <div class="empty">No regular customers waiting</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Served History</h2>
+    {% if history %}
+    <table>
+      <tr><th>Token</th><th>Name</th><th>Type</th><th>Issued at</th></tr>
+      {% for c in history %}
+      <tr><td>{{ c.token }}</td><td>{{ c.name }}</td><td>{{ c.type }}</td><td>{{ c.time }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}
+      <div class="empty">No customers served yet</div>
+    {% endif %}
+  </div>
+
+  <form method="post" action="/reset" onsubmit="return confirm('Reset everything?');">
+    <button class="grey" type="submit">Reset for New Day</button>
+  </form>
+</div>
+</body>
+</html>
